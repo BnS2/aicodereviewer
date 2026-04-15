@@ -1,4 +1,7 @@
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
+import { NotFound } from "@/components/not-found";
+import { TRPCProvider } from "@/lib/trpc";
+
 import appCss from "./globals.css?url";
 
 export const Route = createRootRoute({
@@ -25,6 +28,7 @@ export const Route = createRootRoute({
     ],
   }),
   component: RootLayout,
+  notFoundComponent: NotFound,
 });
 
 function RootLayout() {
@@ -34,7 +38,9 @@ function RootLayout() {
         <HeadContent />
       </head>
       <body>
-        <Outlet />
+        <TRPCProvider>
+          <Outlet />
+        </TRPCProvider>
         <Scripts />
       </body>
     </html>

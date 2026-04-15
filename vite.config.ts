@@ -16,7 +16,7 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   plugins: [
-    varlockVitePlugin(),
+    varlockVitePlugin({ ssrInjectMode: 'auto-load' }),
     tailwindcss(),
     tanstackStart({
       srcDirectory: "src", // This is the default

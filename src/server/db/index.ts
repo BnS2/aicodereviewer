@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { ENV } from "varlock";
+import { ENV } from "varlock/env";
 
 const createPrismaClient = () => new PrismaClient();
 

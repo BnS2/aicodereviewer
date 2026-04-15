@@ -46,3 +46,4 @@ yarn-error.log*
 /src/generated/prisma
 
 !.env.schema
+.output
