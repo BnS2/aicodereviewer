@@ -13,7 +13,8 @@
       "!.vinxi",
       "!.output",
       "!.tanstack",
-      "!**/*.gen.ts"
+      "!src/*.gen.ts",
+      "!src/components/ui/*.tsx"
     ]
   },
   "formatter": {
