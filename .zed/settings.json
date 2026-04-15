@@ -1,0 +1,25 @@
+{
+  "languages": {
+    "TypeScript": {
+      "code_actions_on_format": {
+        "source.organizeImports.biome": true
+      }
+    },
+    "TSX": {
+      "code_actions_on_format": {
+        "source.action.useSortedAttributes.biome": true,
+        "source.organizeImports.biome": true
+      }
+    },
+    "JavaScript": {
+      "code_actions_on_format": {
+        "source.organizeImports.biome": true
+      }
+    },
+    "JSON": {
+      "code_actions_on_format": {
+        "source.action.useSortedKeys.biome": true
+      }
+    }
+  }
+}
