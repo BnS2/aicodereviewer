@@ -2,6 +2,7 @@
 
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import { varlockVitePlugin } from "@varlock/vite-integration";
 import viteReact from "@vitejs/plugin-react";
 import { nitro } from "nitro/vite";
 import { defineConfig } from "vite";
@@ -15,6 +16,7 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   plugins: [
+    varlockVitePlugin(),
     tailwindcss(),
     tanstackStart({
       srcDirectory: "src", // This is the default
