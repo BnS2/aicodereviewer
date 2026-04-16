@@ -13,8 +13,10 @@
       "!.vinxi",
       "!.output",
       "!.tanstack",
-      "!src/*.gen.ts",
-      "!src/components/ui/*.tsx"
+      "!**/*.gen.ts",
+      "!src/components/ui",
+      "!env.d.ts",
+      "!src/app/globals.css"
     ]
   },
   "formatter": {
@@ -35,6 +37,15 @@
     "enabled": true,
     "rules": {
       "recommended": true,
+      "nursery": {
+        "useSortedClasses": {
+          "level": "warn",
+          "fix": "safe",
+          "options": {
+            "functions": ["clsx", "cva", "tw", "cn"]
+          }
+        }
+      },
       "correctness": {
         "noUnusedImports": "error",
         "noUnusedVariables": "error",
