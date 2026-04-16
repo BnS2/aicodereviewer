@@ -8,7 +8,7 @@ export const Route = createFileRoute("/")({
 
 function Home() {
   return (
-    <div className="flex min-hscreen items-center justify-center">
+    <div className="flex min-h-screen items-center justify-center">
       <div>
         <h1>Welcome to AICodeReviewer</h1>
         <p>Start Reviewing your code today!</p>
@@ -16,7 +16,7 @@ function Home() {
 
       <div className="flex gap-4">
         <Button asChild>
-          <Link to="/login">Login</Link>
+          <Link to="/signIn">Login</Link>
         </Button>
       </div>
       <HealthCheck />

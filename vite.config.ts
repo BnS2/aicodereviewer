@@ -1,5 +1,3 @@
-// vite.config.ts
-
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import { varlockVitePlugin } from "@varlock/vite-integration";
@@ -16,13 +14,12 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   plugins: [
-    varlockVitePlugin({ ssrInjectMode: 'auto-load' }),
+    varlockVitePlugin({ ssrInjectMode: "auto-load" }),
     tailwindcss(),
     tanstackStart({
-      srcDirectory: "src", // This is the default
+      srcDirectory: "src",
       router: {
-        // Specifies the directory TanStack Router uses for your routes.
-        routesDirectory: "app", // Defaults to "routes", relative to srcDirectory
+        routesDirectory: "app",
       },
     }),
     viteReact(),
