@@ -1,5 +1,4 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { github } from "better-auth";
 import type React from "react";
 import { useState } from "react";
 import { FaGithub } from "react-icons/fa";
@@ -8,27 +7,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { signIn } from "@/lib/auth-client";
-import { cn } from "@/lib/utils";
+import {signIn, signUp } from "@/lib/auth-client";
 
-export const Route = createFileRoute("/(auth)/signIn")({
-  component: SignIn,
+export const Route = createFileRoute("/(auth)/sign-up")({
+  component: SignUp,
 });
 
-function SignIn() {
+function SignUp() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleEmailSignIn = async (e: React.FormEvent) => {
+  const handleEmailSignIn = async (e: React.SubmitEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    const result = await signIn.email({
+    const result = await signUp.email({
       email,
+      name,
       password,
     });
 
@@ -54,8 +54,8 @@ function SignIn() {
     <div className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Sign In</CardTitle>
-          <CardDescription>Sign in with your email or GitHub account</CardDescription>
+          <CardTitle className="text-2xl">Sign Up</CardTitle>
+          <CardDescription>Create an account with your email or GitHub account</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Button
@@ -65,7 +65,7 @@ function SignIn() {
             className="w-full"
           >
             <FaGithub className="mr-2 size-4" />
-            Sign in with GitHub
+            Sign up with GitHub
           </Button>
 
           <div className="relative">
@@ -79,11 +79,20 @@ function SignIn() {
 
           <form onSubmit={handleEmailSignIn} className="space-y-4">
             <div className="space-y-2">
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="name@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
@@ -103,13 +112,13 @@ function SignIn() {
             {error && <p className="text-red-500">{error}</p>}
 
             <Button className="w-full" disabled={loading} type="submit">
-              {loading ? "Signing in..." : "Sign in"}
+              {loading ? "Signing up..." : "Sign up"}
             </Button>
           </form>
           <p className="text-center text-muted-foreground text-sm">
-            Don&apos; have an account?{" "}
-            <Link to="/signUp" className="underline">
-              Sign up
+            Already have an account?{" "}
+            <Link to="/sign-in" className="underline">
+              Sign in
             </Link>
           </p>
         </CardContent>

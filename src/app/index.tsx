@@ -16,7 +16,10 @@ function Home() {
 
       <div className="flex gap-4">
         <Button asChild>
-          <Link to="/signIn">Login</Link>
+          <Link to="/sign-in">Sign In</Link>
+        </Button>
+        <Button asChild>
+          <Link to="/sign-up">Sign Up</Link>
         </Button>
       </div>
       <HealthCheck />
