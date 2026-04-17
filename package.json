@@ -44,7 +44,6 @@
   "devDependencies": {
     "@biomejs/biome": "^2.4.12",
     "@bns2/eslint-plugin-tailwind-v4": "^1.0.6",
-    "@eslint/js": "^10.0.1",
     "@tailwindcss/node": "^4.2.2",
     "@tailwindcss/vite": "^4.2.2",
     "@tanstack/eslint-config": "^0.4.0",

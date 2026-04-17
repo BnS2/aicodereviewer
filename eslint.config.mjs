@@ -1,5 +1,4 @@
 import tailwindV4 from "@bns2/eslint-plugin-tailwind-v4";
-import js from "@eslint/js";
 import { tanstackConfig } from "@tanstack/eslint-config";
 import { defineConfig, globalIgnores } from "eslint/config";
 import biome from "eslint-config-biome";
@@ -18,7 +17,6 @@ export default defineConfig([
     "env.d.ts",
   ]),
 
-  js.configs.recommended,
   ...tanstackConfig,
   biome,
   ...tailwindCanonicalClasses.configs["flat/recommended"],
@@ -26,6 +24,7 @@ export default defineConfig([
   {
     rules: {
       "sort-imports": "off",
+      "import/order": "off",
       "tailwind-v4/typo": ["error", { cssPath: "./src/app/globals.css" }],
       "tailwind-canonical-classes/tailwind-canonical-classes": [
         "warn",
