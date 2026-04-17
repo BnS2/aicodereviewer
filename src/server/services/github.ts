@@ -23,29 +23,54 @@ export async function fetchGitHubRepos(accessToken: string): Promise<Array<GitHu
   const MAX_PAGES = 100; // Safety limit: max 10,000 repos
 
   while (hasMore && page <= MAX_PAGES) {
-    const response = await fetch(
-      `https://api.github.com/user/repos?per_page=${perPage}&page=${page}&sort=updated`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          Accept: "application/vnd.github.v3+json",
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+    try {
+      const response = await fetch(
+        `https://api.github.com/user/repos?per_page=${perPage}&page=${page}&sort=updated`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            Accept: "application/vnd.github.v3+json",
+          },
+          signal: controller.signal,
         },
-      },
-    );
+      );
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch GitHub repos: ${response.status}`);
-    }
+      if (!response.ok) {
+        const body = await response.text().catch(() => "No body");
+        if (response.status === 401) {
+          throw new Error("GitHubUnauthorized");
+        }
+        if (response.status === 403 && response.headers.get("X-RateLimit-Remaining") === "0") {
+          throw new Error("GitHubRateLimited");
+        }
+        if (response.status >= 500) {
+          throw new Error("ServiceUnavailable");
+        }
+        throw new Error(`GitHubApiError: ${response.status} - ${body}`);
+      }
 
-    const data = (await response.json()) as Array<GitHubRepo>;
-    repos.push(...data);
+      const data = (await response.json()) as Array<GitHubRepo>;
+      repos.push(...data);
 
-    // Check GitHub's 'Link' header to see if a next page exists
-    const linkHeader = response.headers.get("link");
-    hasMore = !!linkHeader && linkHeader.includes('rel="next"');
+      const linkHeader = response.headers.get("link");
+      hasMore = !!linkHeader && linkHeader.includes('rel="next"');
 
-    if (hasMore) {
-      page++;
+      if (hasMore) {
+        if (page === MAX_PAGES) {
+          break;
+        }
+        page++;
+      }
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new Error("GitHubTimeout");
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
     }
   }
 

@@ -17,7 +17,9 @@ export const auth = betterAuth({
     github: {
       clientId: ENV.GITHUB_CLIENT_ID,
       clientSecret: ENV.GITHUB_CLIENT_SECRET,
-      scope: ["read:user", "user:email", "repo"],
+      // We only need public repo access for listing and syncing.
+      // If private repo access is needed in the future, change to 'repo'.
+      scope: ["read:user", "user:email", "public_repo"],
     },
   },
   account: {

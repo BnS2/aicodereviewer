@@ -25,7 +25,7 @@ model User {
   sessions      Session[]
   accounts      Account[]
   repositories  Repository[]
-  reviews       Reviews[]
+  reviews       Review[]
 
   @@unique([email])
   @@map("user")
@@ -82,7 +82,10 @@ model Verification {
 model Repository {
   id        String   @id @default(cuid())
   userId    String
-  githubId  Int      @unique
+  githubId    Int
+  description String?
+  language    String?
+  stars       Int      @default(0)
   name      String
   fullName  String
   private   Boolean  @default(false)
@@ -90,11 +93,14 @@ model Repository {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  reviews Reviews[]
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviews Review[]
+
+  @@unique([userId, githubId])
+  @@map("repository")
 }
 
-model Reviews {
+model Review {
   id           String       @id @default(cuid())
   repositoryId String
   userId       String
@@ -114,6 +120,7 @@ model Reviews {
   @@index([repositoryId])
   @@index([userId])
   @@index([status])
+  @@map("review")
 }
 
 enum ReviewStatus {

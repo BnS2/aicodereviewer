@@ -15,7 +15,7 @@ export const repositoryRouter = createTRPCRouter({
     return repositories;
   }),
 
-  fetchFromGitHub: protectedProcedure.query(async ({ ctx }) => {
+  fetchFromGitHub: protectedProcedure.mutation(async ({ ctx }) => {
     const accessToken = await getGitHubAccessToken(ctx.user.id);
 
     if (!accessToken) {
@@ -42,22 +42,32 @@ export const repositoryRouter = createTRPCRouter({
   connect: protectedProcedure
     .input(
       z.object({
-        repos: z.array(
-          z.object({
-            githubId: z.number(),
-            name: z.string(),
-            fullName: z.string(),
-            private: z.boolean(),
-            htmlUrl: z.string(),
-          }),
-        ),
+        repos: z
+          .array(
+            z.object({
+              githubId: z.number(),
+              name: z.string(),
+              fullName: z.string(),
+              private: z.boolean(),
+              htmlUrl: z.string(),
+              description: z.string().nullable(),
+              language: z.string().nullable(),
+              stars: z.number(),
+            }),
+          )
+          .max(500),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       const result = await Promise.all(
         input.repos.map((repo) =>
           ctx.db.repository.upsert({
-            where: { githubId: repo.githubId },
+            where: {
+              userId_githubId: {
+                userId: ctx.user.id,
+                githubId: repo.githubId,
+              },
+            },
             create: {
               userId: ctx.user.id,
               githubId: repo.githubId,
@@ -65,13 +75,18 @@ export const repositoryRouter = createTRPCRouter({
               fullName: repo.fullName,
               private: repo.private,
               htmlUrl: repo.htmlUrl,
+              description: repo.description,
+              language: repo.language,
+              stars: repo.stars,
             },
             update: {
               name: repo.name,
               fullName: repo.fullName,
               private: repo.private,
               htmlUrl: repo.htmlUrl,
-              updatedAt: new Date(),
+              description: repo.description,
+              language: repo.language,
+              stars: repo.stars,
             },
           }),
         ),
@@ -87,7 +102,28 @@ export const repositoryRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await ctx.db.repository.delete({ where: { id: input.id, userId: ctx.user.id } });
+      try {
+        await ctx.db.repository.delete({
+          where: {
+            id: input.id,
+            userId: ctx.user.id,
+          },
+        });
+      } catch (error: unknown) {
+        // P2025 is Prisma's error code for "Record to delete does not exist."
+        if (
+          typeof error === "object" &&
+          error !== null &&
+          "code" in error &&
+          error.code === "P2025"
+        ) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Repository not found or does not belong to you",
+          });
+        }
+        throw error;
+      }
 
       return { success: true };
     }),
