@@ -104,8 +104,8 @@ function SignIn() {
               {loading ? "Signing in..." : "Sign in"}
             </Button>
           </form>
-          <p className="text-center text-muted-foreground text-sm">
-            Don&apos; have an account?{" "}
+          <p className="pb-6 text-center text-muted-foreground text-sm">
+            Don&apos;t have an account?{" "}
             <Link to="/sign-up" className="underline">
               Sign up
             </Link>

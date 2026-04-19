@@ -1,13 +1,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink } from "@trpc/client";
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
+import { useState } from "react";
 import superjson from "superjson";
 import { ENV } from "varlock/env";
 import { trpc } from "./client";
 
 function getBaseUrl() {
   if (typeof window !== "undefined") return "";
-  
+
   if (ENV.NETLIFY_URL) return `https://${ENV.NETLIFY_URL}`;
   return `http://localhost:${ENV.PORT}`;
 }

@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import {signIn, signUp } from "@/lib/auth-client";
+import { signIn, signUp } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/(auth)/sign-up")({
   component: SignUp,
@@ -115,7 +115,7 @@ function SignUp() {
               {loading ? "Signing up..." : "Sign up"}
             </Button>
           </form>
-          <p className="text-center text-muted-foreground text-sm">
+          <p className="pb-6 text-center text-muted-foreground text-sm">
             Already have an account?{" "}
             <Link to="/sign-in" className="underline">
               Sign in

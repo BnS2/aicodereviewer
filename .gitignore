@@ -51,3 +51,6 @@ yarn-error.log*
 
 !.env.schema
 .output
+
+# CodeRabbit review notes
+coderabbit-review.md

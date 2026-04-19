@@ -12,11 +12,12 @@ import { Route as rootRouteImport } from './app/__root'
 import { Route as dashboardRouteRouteImport } from './app/(dashboard)/route'
 import { Route as authRouteRouteImport } from './app/(auth)/route'
 import { Route as IndexRouteImport } from './app/index'
-import { Route as dashboardReposRouteImport } from './app/(dashboard)/repos'
 import { Route as authSignUpRouteImport } from './app/(auth)/sign-up'
 import { Route as authSignInRouteImport } from './app/(auth)/sign-in'
+import { Route as dashboardReposIndexRouteImport } from './app/(dashboard)/repos.index'
 import { Route as ApiTrpcSplatRouteImport } from './app/api/trpc.$'
 import { Route as ApiAuthSplatRouteImport } from './app/api/auth.$'
+import { Route as dashboardReposRepoIdRouteImport } from './app/(dashboard)/repos.$repoId'
 
 const dashboardRouteRoute = dashboardRouteRouteImport.update({
   id: '/(dashboard)',
@@ -31,11 +32,6 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const dashboardReposRoute = dashboardReposRouteImport.update({
-  id: '/repos',
-  path: '/repos',
-  getParentRoute: () => dashboardRouteRoute,
-} as any)
 const authSignUpRoute = authSignUpRouteImport.update({
   id: '/sign-up',
   path: '/sign-up',
@@ -45,6 +41,11 @@ const authSignInRoute = authSignInRouteImport.update({
   id: '/sign-in',
   path: '/sign-in',
   getParentRoute: () => authRouteRoute,
+} as any)
+const dashboardReposIndexRoute = dashboardReposIndexRouteImport.update({
+  id: '/repos/',
+  path: '/repos/',
+  getParentRoute: () => dashboardRouteRoute,
 } as any)
 const ApiTrpcSplatRoute = ApiTrpcSplatRouteImport.update({
   id: '/api/trpc/$',
@@ -56,22 +57,29 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const dashboardReposRepoIdRoute = dashboardReposRepoIdRouteImport.update({
+  id: '/repos/$repoId',
+  path: '/repos/$repoId',
+  getParentRoute: () => dashboardRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/sign-in': typeof authSignInRoute
   '/sign-up': typeof authSignUpRoute
-  '/repos': typeof dashboardReposRoute
+  '/repos/$repoId': typeof dashboardReposRepoIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
+  '/repos/': typeof dashboardReposIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/sign-in': typeof authSignInRoute
   '/sign-up': typeof authSignUpRoute
-  '/repos': typeof dashboardReposRoute
+  '/repos/$repoId': typeof dashboardReposRepoIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
+  '/repos': typeof dashboardReposIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -80,9 +88,10 @@ export interface FileRoutesById {
   '/(dashboard)': typeof dashboardRouteRouteWithChildren
   '/(auth)/sign-in': typeof authSignInRoute
   '/(auth)/sign-up': typeof authSignUpRoute
-  '/(dashboard)/repos': typeof dashboardReposRoute
+  '/(dashboard)/repos/$repoId': typeof dashboardReposRepoIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
+  '/(dashboard)/repos/': typeof dashboardReposIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -90,11 +99,19 @@ export interface FileRouteTypes {
     | '/'
     | '/sign-in'
     | '/sign-up'
-    | '/repos'
+    | '/repos/$repoId'
     | '/api/auth/$'
     | '/api/trpc/$'
+    | '/repos/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/sign-in' | '/sign-up' | '/repos' | '/api/auth/$' | '/api/trpc/$'
+  to:
+    | '/'
+    | '/sign-in'
+    | '/sign-up'
+    | '/repos/$repoId'
+    | '/api/auth/$'
+    | '/api/trpc/$'
+    | '/repos'
   id:
     | '__root__'
     | '/'
@@ -102,9 +119,10 @@ export interface FileRouteTypes {
     | '/(dashboard)'
     | '/(auth)/sign-in'
     | '/(auth)/sign-up'
-    | '/(dashboard)/repos'
+    | '/(dashboard)/repos/$repoId'
     | '/api/auth/$'
     | '/api/trpc/$'
+    | '/(dashboard)/repos/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -138,13 +156,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/(dashboard)/repos': {
-      id: '/(dashboard)/repos'
-      path: '/repos'
-      fullPath: '/repos'
-      preLoaderRoute: typeof dashboardReposRouteImport
-      parentRoute: typeof dashboardRouteRoute
-    }
     '/(auth)/sign-up': {
       id: '/(auth)/sign-up'
       path: '/sign-up'
@@ -159,6 +170,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authSignInRouteImport
       parentRoute: typeof authRouteRoute
     }
+    '/(dashboard)/repos/': {
+      id: '/(dashboard)/repos/'
+      path: '/repos'
+      fullPath: '/repos/'
+      preLoaderRoute: typeof dashboardReposIndexRouteImport
+      parentRoute: typeof dashboardRouteRoute
+    }
     '/api/trpc/$': {
       id: '/api/trpc/$'
       path: '/api/trpc/$'
@@ -172,6 +190,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/(dashboard)/repos/$repoId': {
+      id: '/(dashboard)/repos/$repoId'
+      path: '/repos/$repoId'
+      fullPath: '/repos/$repoId'
+      preLoaderRoute: typeof dashboardReposRepoIdRouteImport
+      parentRoute: typeof dashboardRouteRoute
     }
   }
 }
@@ -191,11 +216,13 @@ const authRouteRouteWithChildren = authRouteRoute._addFileChildren(
 )
 
 interface dashboardRouteRouteChildren {
-  dashboardReposRoute: typeof dashboardReposRoute
+  dashboardReposRepoIdRoute: typeof dashboardReposRepoIdRoute
+  dashboardReposIndexRoute: typeof dashboardReposIndexRoute
 }
 
 const dashboardRouteRouteChildren: dashboardRouteRouteChildren = {
-  dashboardReposRoute: dashboardReposRoute,
+  dashboardReposRepoIdRoute: dashboardReposRepoIdRoute,
+  dashboardReposIndexRoute: dashboardReposIndexRoute,
 }
 
 const dashboardRouteRouteWithChildren = dashboardRouteRoute._addFileChildren(
