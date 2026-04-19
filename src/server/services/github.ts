@@ -1,4 +1,4 @@
-import type { GitHubRepo } from "@/lib/types";
+import type { GitHubApiRepo, GitHubPullRequest } from "@/lib/types";
 import { db } from "@/server/db";
 
 export async function getGitHubAccessToken(userId: string): Promise<string | null> {
@@ -15,8 +15,8 @@ export async function getGitHubAccessToken(userId: string): Promise<string | nul
   return account?.accessToken ?? null;
 }
 
-export async function fetchGitHubRepos(accessToken: string): Promise<Array<GitHubRepo>> {
-  const repos: Array<GitHubRepo> = [];
+export async function fetchGitHubRepos(accessToken: string): Promise<Array<GitHubApiRepo>> {
+  const repos: Array<GitHubApiRepo> = [];
   let hasMore = true;
   let page = 1;
   const perPage = 100;
@@ -52,7 +52,7 @@ export async function fetchGitHubRepos(accessToken: string): Promise<Array<GitHu
         throw new Error(`GitHubApiError: ${response.status} - ${body}`);
       }
 
-      const data = (await response.json()) as Array<GitHubRepo>;
+      const data = (await response.json()) as Array<GitHubApiRepo>;
       repos.push(...data);
 
       const linkHeader = response.headers.get("link");
@@ -75,4 +75,47 @@ export async function fetchGitHubRepos(accessToken: string): Promise<Array<GitHu
   }
 
   return repos;
+}
+
+export async function fetchPullRequests(
+  accessToken: string,
+  owner: string,
+  repo: string,
+  state: "open" | "closed" | "all" = "open",
+): Promise<Array<GitHubPullRequest>> {
+  const response = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/pulls?state=${state}&per_page=30&sort=updated&direction=desc`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/vnd.github.v3+json",
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Github API error: ${response.status}`);
+  }
+
+  return (await response.json()) as Array<GitHubPullRequest>;
+}
+
+export async function fetchSinglePullRequest(
+  accessToken: string,
+  owner: string,
+  repo: string,
+  prNumber: number,
+): Promise<GitHubPullRequest> {
+  const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: "application/vnd.github.v3+json",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Github API error: ${response.status}`);
+  }
+
+  return (await response.json()) as GitHubPullRequest;
 }

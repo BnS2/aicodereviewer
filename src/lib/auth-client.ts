@@ -5,4 +5,4 @@ export const authClient = createAuthClient({
   baseURL: ENV.PUBLIC_APP_URL,
 });
 
-export const { signIn, signUp, signOut, useSession, getSession } = createAuthClient();
+export const { signIn, signUp, signOut, useSession, getSession, linkSocial } = createAuthClient();
