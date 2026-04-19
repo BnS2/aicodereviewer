@@ -108,7 +108,7 @@ function Repos() {
   };
 
   const handleConnect = () => {
-    const reposToConnect = availableRepos
+    const reposToConnect = filteredAvailableRepos
       .filter((repo) => selectedRepos.has(repo.githubId))
       .map((r) => ({
         githubId: r.githubId,
@@ -280,7 +280,7 @@ function Repos() {
 
                 <div className="flex items-center justify-between border-border/60 border-t bg-muted/60 px-6 py-4">
                   <p className="text-muted-foreground text-sm">
-                    {selectedRepos.size} of {filteredAvailableRepos.length} selected
+                    {filteredAvailableRepos.filter(r => selectedRepos.has(r.githubId)).length} of {filteredAvailableRepos.length} selected
                   </p>
                   <Button
                     onClick={handleConnect}
@@ -416,7 +416,8 @@ function ConnectedRepoCard({
                 variant={"ghost"}
                 size={"icon-sm"}
                 disabled={isDisconnecting}
-                className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+                className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100 focus:opacity-100 focus-visible:opacity-100"
+                aria-label="Disconnect"
               >
                 <Trash2Icon className="size-4" />
               </Button>

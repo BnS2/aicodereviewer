@@ -12,7 +12,7 @@ function Card({
       data-slot="card"
       data-size={size}
       className={cn(
-        "bg-card text-card-foreground flex flex-col border border-border/60",
+        "bg-card text-card-foreground border border-border/60 group/card grid",
         "transition-all duration-200 ease-out",
         "dark:bg-card dark:border-border/50",
         className

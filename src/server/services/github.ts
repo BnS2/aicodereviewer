@@ -78,44 +78,83 @@ export async function fetchGitHubRepos(accessToken: string): Promise<Array<GitHu
 }
 
 export async function fetchPullRequests(
-  accessToken: string,
   owner: string,
   repo: string,
+  accessToken: string,
   state: "open" | "closed" | "all" = "open",
 ): Promise<Array<GitHubPullRequest>> {
-  const response = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/pulls?state=${state}&per_page=30&sort=updated&direction=desc`,
-    {
+  const prs: Array<GitHubPullRequest> = [];
+  let hasMore = true;
+  let page = 1;
+
+  while (hasMore) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const response = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/pulls?state=${state}&per_page=100&page=${page}&sort=updated&direction=desc`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            Accept: "application/vnd.github.v3+json",
+          },
+          signal: controller.signal,
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Github API error: ${response.status}`);
+      }
+
+      const data = (await response.json()) as Array<GitHubPullRequest>;
+      prs.push(...data);
+
+      const linkHeader = response.headers.get("link");
+      hasMore = !!linkHeader && linkHeader.includes('rel="next"');
+      page++;
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new Error("GitHubTimeout");
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  return prs;
+}
+
+export async function fetchSinglePullRequest(
+  owner: string,
+  repo: string,
+  accessToken: string,
+  prNumber: number,
+): Promise<GitHubPullRequest> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+
+  try {
+    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: "application/vnd.github.v3+json",
       },
-    },
-  );
+      signal: controller.signal,
+    });
 
-  if (!response.ok) {
-    throw new Error(`Github API error: ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`Github API error: ${response.status}`);
+    }
+
+    return (await response.json()) as GitHubPullRequest;
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("GitHubTimeout");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
   }
-
-  return (await response.json()) as Array<GitHubPullRequest>;
-}
-
-export async function fetchSinglePullRequest(
-  accessToken: string,
-  owner: string,
-  repo: string,
-  prNumber: number,
-): Promise<GitHubPullRequest> {
-  const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      Accept: "application/vnd.github.v3+json",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Github API error: ${response.status}`);
-  }
-
-  return (await response.json()) as GitHubPullRequest;
 }

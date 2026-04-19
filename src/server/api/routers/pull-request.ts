@@ -92,7 +92,12 @@ export const pullRequestRouter = createTRPCRouter({
         orderBy: { createdAt: "desc" },
       });
 
-      const reviewMap = new Map(existingReviews.map((r: any) => [r.prNumber, r]));
+      const reviewMap = new Map();
+      for (const r of existingReviews) {
+        if (!reviewMap.has(r.prNumber)) {
+          reviewMap.set(r.prNumber, r);
+        }
+      }
 
       return prs.map((pr) => formatPR(pr, reviewMap.get(pr.number)));
     }),
