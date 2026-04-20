@@ -136,13 +136,16 @@ export async function fetchSinglePullRequest(
   const timeout = setTimeout(() => controller.abort(), 10000);
 
   try {
-    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: "application/vnd.github.v3+json",
+    const response = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: "application/vnd.github.v3+json",
+        },
+        signal: controller.signal,
       },
-      signal: controller.signal,
-    });
+    );
 
     if (!response.ok) {
       throw new Error(`Github API error: ${response.status}`);
@@ -157,4 +160,26 @@ export async function fetchSinglePullRequest(
   } finally {
     clearTimeout(timeout);
   }
+}
+
+export async function enrichPullRequestsWithStats(
+  owner: string,
+  repo: string,
+  accessToken: string,
+  prs: Array<GitHubPullRequest>,
+  concurrency = 5, // stay well under GitHub's rate limit
+): Promise<Array<GitHubPullRequest>> {
+  const results: Array<GitHubPullRequest> = [];
+
+  for (let i = 0; i < prs.length; i += concurrency) {
+    const batch = prs.slice(i, i + concurrency);
+    const enriched = await Promise.all(
+      batch.map(
+        (pr) => fetchSinglePullRequest(owner, repo, accessToken, pr.number).catch(() => pr), // fall back to original on error
+      ),
+    );
+    results.push(...enriched);
+  }
+
+  return results;
 }

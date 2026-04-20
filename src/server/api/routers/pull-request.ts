@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import type { GitHubPullRequest } from "@/lib/types";
 import {
+  enrichPullRequestsWithStats,
   fetchPullRequests,
   fetchSinglePullRequest,
   getGitHubAccessToken,
@@ -79,6 +80,11 @@ export const pullRequestRouter = createTRPCRouter({
       );
 
       const prs = await fetchPullRequests(owner, repo, accessToken, input.state);
+
+      // NOTE: This doubles the fetch count for each PR to get additions/deletions stats.
+      // With N PRs, this results in 1 + N API calls.
+      const enrichedPrs = await enrichPullRequestsWithStats(owner, repo, accessToken, prs);
+
       const existingReviews = await ctx.db.review.findMany({
         where: {
           repositoryId: repository.id,
@@ -99,7 +105,7 @@ export const pullRequestRouter = createTRPCRouter({
         }
       }
 
-      return prs.map((pr) => formatPR(pr, reviewMap.get(pr.number)));
+      return enrichedPrs.map((pr) => formatPR(pr, reviewMap.get(pr.number)));
     }),
 
   get: protectedProcedure

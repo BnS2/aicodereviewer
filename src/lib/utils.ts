@@ -9,7 +9,7 @@ export function cn(...inputs: Array<ClassValue>) {
 export function formatDate(date: Date): string {
   const d = date instanceof Date ? date : new Date(date);
   const now = new Date();
-  
+
   const localNow = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const localDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
@@ -17,7 +17,7 @@ export function formatDate(date: Date): string {
   const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
 
   if (diffDays === 0) return "today";
-  
+
   if (diffDays < 0) {
     const futureDays = Math.abs(diffDays);
     if (futureDays === 1) return "tomorrow";

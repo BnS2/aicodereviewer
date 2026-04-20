@@ -14,10 +14,11 @@ import { Route as authRouteRouteImport } from './app/(auth)/route'
 import { Route as IndexRouteImport } from './app/index'
 import { Route as authSignUpRouteImport } from './app/(auth)/sign-up'
 import { Route as authSignInRouteImport } from './app/(auth)/sign-in'
-import { Route as dashboardReposIndexRouteImport } from './app/(dashboard)/repos.index'
+import { Route as dashboardReposIndexRouteImport } from './app/(dashboard)/repos/index'
 import { Route as ApiTrpcSplatRouteImport } from './app/api/trpc.$'
 import { Route as ApiAuthSplatRouteImport } from './app/api/auth.$'
-import { Route as dashboardReposRepoIdRouteImport } from './app/(dashboard)/repos.$repoId'
+import { Route as dashboardReposRepoIdIndexRouteImport } from './app/(dashboard)/repos/$repoId/index'
+import { Route as dashboardReposRepoIdPrPrNumberRouteImport } from './app/(dashboard)/repos/$repoId/pr/$prNumber'
 
 const dashboardRouteRoute = dashboardRouteRouteImport.update({
   id: '/(dashboard)',
@@ -57,29 +58,38 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const dashboardReposRepoIdRoute = dashboardReposRepoIdRouteImport.update({
-  id: '/repos/$repoId',
-  path: '/repos/$repoId',
-  getParentRoute: () => dashboardRouteRoute,
-} as any)
+const dashboardReposRepoIdIndexRoute =
+  dashboardReposRepoIdIndexRouteImport.update({
+    id: '/repos/$repoId/',
+    path: '/repos/$repoId/',
+    getParentRoute: () => dashboardRouteRoute,
+  } as any)
+const dashboardReposRepoIdPrPrNumberRoute =
+  dashboardReposRepoIdPrPrNumberRouteImport.update({
+    id: '/repos/$repoId/pr/$prNumber',
+    path: '/repos/$repoId/pr/$prNumber',
+    getParentRoute: () => dashboardRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/sign-in': typeof authSignInRoute
   '/sign-up': typeof authSignUpRoute
-  '/repos/$repoId': typeof dashboardReposRepoIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
   '/repos/': typeof dashboardReposIndexRoute
+  '/repos/$repoId/': typeof dashboardReposRepoIdIndexRoute
+  '/repos/$repoId/pr/$prNumber': typeof dashboardReposRepoIdPrPrNumberRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/sign-in': typeof authSignInRoute
   '/sign-up': typeof authSignUpRoute
-  '/repos/$repoId': typeof dashboardReposRepoIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
   '/repos': typeof dashboardReposIndexRoute
+  '/repos/$repoId': typeof dashboardReposRepoIdIndexRoute
+  '/repos/$repoId/pr/$prNumber': typeof dashboardReposRepoIdPrPrNumberRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -88,10 +98,11 @@ export interface FileRoutesById {
   '/(dashboard)': typeof dashboardRouteRouteWithChildren
   '/(auth)/sign-in': typeof authSignInRoute
   '/(auth)/sign-up': typeof authSignUpRoute
-  '/(dashboard)/repos/$repoId': typeof dashboardReposRepoIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
   '/(dashboard)/repos/': typeof dashboardReposIndexRoute
+  '/(dashboard)/repos/$repoId/': typeof dashboardReposRepoIdIndexRoute
+  '/(dashboard)/repos/$repoId/pr/$prNumber': typeof dashboardReposRepoIdPrPrNumberRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -99,19 +110,21 @@ export interface FileRouteTypes {
     | '/'
     | '/sign-in'
     | '/sign-up'
-    | '/repos/$repoId'
     | '/api/auth/$'
     | '/api/trpc/$'
     | '/repos/'
+    | '/repos/$repoId/'
+    | '/repos/$repoId/pr/$prNumber'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/sign-in'
     | '/sign-up'
-    | '/repos/$repoId'
     | '/api/auth/$'
     | '/api/trpc/$'
     | '/repos'
+    | '/repos/$repoId'
+    | '/repos/$repoId/pr/$prNumber'
   id:
     | '__root__'
     | '/'
@@ -119,10 +132,11 @@ export interface FileRouteTypes {
     | '/(dashboard)'
     | '/(auth)/sign-in'
     | '/(auth)/sign-up'
-    | '/(dashboard)/repos/$repoId'
     | '/api/auth/$'
     | '/api/trpc/$'
     | '/(dashboard)/repos/'
+    | '/(dashboard)/repos/$repoId/'
+    | '/(dashboard)/repos/$repoId/pr/$prNumber'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -191,11 +205,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/(dashboard)/repos/$repoId': {
-      id: '/(dashboard)/repos/$repoId'
+    '/(dashboard)/repos/$repoId/': {
+      id: '/(dashboard)/repos/$repoId/'
       path: '/repos/$repoId'
-      fullPath: '/repos/$repoId'
-      preLoaderRoute: typeof dashboardReposRepoIdRouteImport
+      fullPath: '/repos/$repoId/'
+      preLoaderRoute: typeof dashboardReposRepoIdIndexRouteImport
+      parentRoute: typeof dashboardRouteRoute
+    }
+    '/(dashboard)/repos/$repoId/pr/$prNumber': {
+      id: '/(dashboard)/repos/$repoId/pr/$prNumber'
+      path: '/repos/$repoId/pr/$prNumber'
+      fullPath: '/repos/$repoId/pr/$prNumber'
+      preLoaderRoute: typeof dashboardReposRepoIdPrPrNumberRouteImport
       parentRoute: typeof dashboardRouteRoute
     }
   }
@@ -216,13 +237,15 @@ const authRouteRouteWithChildren = authRouteRoute._addFileChildren(
 )
 
 interface dashboardRouteRouteChildren {
-  dashboardReposRepoIdRoute: typeof dashboardReposRepoIdRoute
   dashboardReposIndexRoute: typeof dashboardReposIndexRoute
+  dashboardReposRepoIdIndexRoute: typeof dashboardReposRepoIdIndexRoute
+  dashboardReposRepoIdPrPrNumberRoute: typeof dashboardReposRepoIdPrPrNumberRoute
 }
 
 const dashboardRouteRouteChildren: dashboardRouteRouteChildren = {
-  dashboardReposRepoIdRoute: dashboardReposRepoIdRoute,
   dashboardReposIndexRoute: dashboardReposIndexRoute,
+  dashboardReposRepoIdIndexRoute: dashboardReposRepoIdIndexRoute,
+  dashboardReposRepoIdPrPrNumberRoute: dashboardReposRepoIdPrPrNumberRoute,
 }
 
 const dashboardRouteRouteWithChildren = dashboardRouteRoute._addFileChildren(

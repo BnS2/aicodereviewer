@@ -66,3 +66,26 @@ export interface GitHubPullRequest {
   deletions: number;
   changed_files: number;
 }
+
+export type PRState = "open" | "closed" | "all";
+
+export interface PullRequestCardProps {
+  pr: {
+    id: number;
+    number: number;
+    title: string;
+    state: "open" | "closed";
+    draft: boolean;
+    htmlUrl: string;
+    author: { login: string; avatarUrl: string };
+    headRef: string;
+    baseRef: string;
+    additions: number;
+    deletions: number;
+    changedFiles: number;
+    createdAt: string;
+    mergedAt: string | null;
+    review: { status: string; createdAt: Date } | null;
+  };
+  repositoryId: string;
+}
