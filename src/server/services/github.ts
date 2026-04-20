@@ -15,6 +15,51 @@ export async function getGitHubAccessToken(userId: string): Promise<string | nul
   return account?.accessToken ?? null;
 }
 
+/**
+ * Shared helper for GitHub API fetching with consistent error handling and timeouts
+ */
+async function githubFetch<T>(
+  url: string,
+  accessToken: string,
+  options: { signal?: AbortSignal } = {},
+): Promise<T> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000); // 10s default timeout
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/vnd.github.v3+json",
+      },
+      signal: options.signal ?? controller.signal,
+    });
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => "No body");
+      if (response.status === 401) {
+        throw new Error("GitHubUnauthorized");
+      }
+      if (response.status === 403 && response.headers.get("X-RateLimit-Remaining") === "0") {
+        throw new Error("GitHubRateLimited");
+      }
+      if (response.status >= 500) {
+        throw new Error("ServiceUnavailable");
+      }
+      throw new Error(`GitHubApiError: ${response.status} - ${body}`);
+    }
+
+    return (await response.json()) as T;
+  } catch (error: unknown) {
+    if (error instanceof Error && (error.name === "AbortError" || error.message === "GitHubTimeout")) {
+      throw new Error("GitHubTimeout");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function fetchGitHubRepos(accessToken: string): Promise<Array<GitHubApiRepo>> {
   const repos: Array<GitHubApiRepo> = [];
   let hasMore = true;
@@ -24,7 +69,7 @@ export async function fetchGitHubRepos(accessToken: string): Promise<Array<GitHu
 
   while (hasMore && page <= MAX_PAGES) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
+    const timeout = setTimeout(() => controller.abort(), 10000);
 
     try {
       const response = await fetch(
@@ -40,15 +85,10 @@ export async function fetchGitHubRepos(accessToken: string): Promise<Array<GitHu
 
       if (!response.ok) {
         const body = await response.text().catch(() => "No body");
-        if (response.status === 401) {
-          throw new Error("GitHubUnauthorized");
-        }
-        if (response.status === 403 && response.headers.get("X-RateLimit-Remaining") === "0") {
+        if (response.status === 401) throw new Error("GitHubUnauthorized");
+        if (response.status === 403 && response.headers.get("X-RateLimit-Remaining") === "0")
           throw new Error("GitHubRateLimited");
-        }
-        if (response.status >= 500) {
-          throw new Error("ServiceUnavailable");
-        }
+        if (response.status >= 500) throw new Error("ServiceUnavailable");
         throw new Error(`GitHubApiError: ${response.status} - ${body}`);
       }
 
@@ -59,9 +99,7 @@ export async function fetchGitHubRepos(accessToken: string): Promise<Array<GitHu
       hasMore = !!linkHeader && linkHeader.includes('rel="next"');
 
       if (hasMore) {
-        if (page === MAX_PAGES) {
-          break;
-        }
+        if (page === MAX_PAGES) break;
         page++;
       }
     } catch (error: unknown) {
@@ -82,37 +120,48 @@ export async function fetchPullRequests(
   repo: string,
   accessToken: string,
   state: "open" | "closed" | "all" = "open",
+  page?: number,
+  per_page?: number,
 ): Promise<Array<GitHubPullRequest>> {
   const prs: Array<GitHubPullRequest> = [];
+  let currentPage = page ?? 1;
   let hasMore = true;
-  let page = 1;
 
   while (hasMore) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
 
     try {
-      const response = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}/pulls?state=${state}&per_page=100&page=${page}&sort=updated&direction=desc`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            Accept: "application/vnd.github.v3+json",
-          },
-          signal: controller.signal,
+      const url = `https://api.github.com/repos/${owner}/${repo}/pulls?state=${state}&per_page=${per_page ?? 100}&page=${currentPage}&sort=updated&direction=desc`;
+      
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: "application/vnd.github.v3+json",
         },
-      );
+        signal: controller.signal,
+      });
 
       if (!response.ok) {
-        throw new Error(`Github API error: ${response.status}`);
+        const body = await response.text().catch(() => "No body");
+        if (response.status === 401) throw new Error("GitHubUnauthorized");
+        if (response.status === 403 && response.headers.get("X-RateLimit-Remaining") === "0")
+          throw new Error("GitHubRateLimited");
+        if (response.status >= 500) throw new Error("ServiceUnavailable");
+        throw new Error(`GitHubApiError: ${response.status} - ${body}`);
       }
 
       const data = (await response.json()) as Array<GitHubPullRequest>;
       prs.push(...data);
 
       const linkHeader = response.headers.get("link");
-      hasMore = !!linkHeader && linkHeader.includes('rel="next"');
-      page++;
+      
+      if (page !== undefined) {
+        hasMore = false;
+      } else {
+        hasMore = !!linkHeader && linkHeader.includes('rel="next"');
+        currentPage++;
+      }
     } catch (error: unknown) {
       if (error instanceof Error && error.name === "AbortError") {
         throw new Error("GitHubTimeout");
@@ -132,29 +181,40 @@ export async function fetchSinglePullRequest(
   accessToken: string,
   prNumber: number,
 ): Promise<GitHubPullRequest> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
+  return githubFetch<GitHubPullRequest>(
+    `https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}`,
+    accessToken,
+  );
+}
 
-  try {
-    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: "application/vnd.github.v3+json",
-      },
-      signal: controller.signal,
-    });
+export async function enrichPullRequestsWithStats(
+  owner: string,
+  repo: string,
+  accessToken: string,
+  prs: Array<GitHubPullRequest>,
+  concurrency = 5, // stay well under GitHub's rate limit
+): Promise<Array<GitHubPullRequest>> {
+  const results: Array<GitHubPullRequest> = [];
 
-    if (!response.ok) {
-      throw new Error(`Github API error: ${response.status}`);
-    }
-
-    return (await response.json()) as GitHubPullRequest;
-  } catch (error: unknown) {
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("GitHubTimeout");
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeout);
+  for (let i = 0; i < prs.length; i += concurrency) {
+    const batch = prs.slice(i, i + concurrency);
+    const enriched = await Promise.all(
+      batch.map((pr) =>
+        fetchSinglePullRequest(owner, repo, accessToken, pr.number).catch((err) => {
+          // Only fall back to original PR if it already has the core stats we need
+          if (
+            pr.additions !== undefined &&
+            pr.deletions !== undefined &&
+            pr.changed_files !== undefined
+          ) {
+            return pr;
+          }
+          throw err;
+        }),
+      ),
+    );
+    results.push(...enriched);
   }
+
+  return results;
 }

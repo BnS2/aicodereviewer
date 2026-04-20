@@ -170,7 +170,7 @@ function Repos() {
       </div>
 
       {showGitHubRepos && (
-        <Card className="overflow-hidden">
+        <Card className="flex flex-col overflow-hidden">
           <div className="border-border/60 border-b bg-muted/30 px-6 py-4">
             <div className="flex items-center justify-between">
               <div>
@@ -280,7 +280,8 @@ function Repos() {
 
                 <div className="flex items-center justify-between border-border/60 border-t bg-muted/60 px-6 py-4">
                   <p className="text-muted-foreground text-sm">
-                    {filteredAvailableRepos.filter(r => selectedRepos.has(r.githubId)).length} of {filteredAvailableRepos.length} selected
+                    {filteredAvailableRepos.filter((r) => selectedRepos.has(r.githubId)).length} of{" "}
+                    {filteredAvailableRepos.length} selected
                   </p>
                   <Button
                     onClick={handleConnect}
@@ -416,7 +417,7 @@ function ConnectedRepoCard({
                 variant={"ghost"}
                 size={"icon-sm"}
                 disabled={isDisconnecting}
-                className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100 focus:opacity-100 focus-visible:opacity-100"
+                className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive focus:opacity-100 focus-visible:opacity-100 group-hover:opacity-100"
                 aria-label="Disconnect"
               >
                 <Trash2Icon className="size-4" />
