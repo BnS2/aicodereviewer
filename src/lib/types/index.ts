@@ -62,9 +62,9 @@ export interface GitHubPullRequest {
   base: {
     ref: string;
   };
-  additions: number;
-  deletions: number;
-  changed_files: number;
+  additions?: number;
+  deletions?: number;
+  changed_files?: number;
 }
 
 export type PRState = "open" | "closed" | "all";

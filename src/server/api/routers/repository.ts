@@ -59,38 +59,38 @@ export const repositoryRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const result = await Promise.all(
-        input.repos.map((repo) =>
-          ctx.db.repository.upsert({
-            where: {
-              userId_githubId: {
-                userId: ctx.user.id,
-                githubId: repo.githubId,
-              },
-            },
-            create: {
+      const result = [];
+      for (const repo of input.repos) {
+        const item = await ctx.db.repository.upsert({
+          where: {
+            userId_githubId: {
               userId: ctx.user.id,
               githubId: repo.githubId,
-              name: repo.name,
-              fullName: repo.fullName,
-              private: repo.private,
-              htmlUrl: repo.htmlUrl,
-              description: repo.description,
-              language: repo.language,
-              stars: repo.stars,
             },
-            update: {
-              name: repo.name,
-              fullName: repo.fullName,
-              private: repo.private,
-              htmlUrl: repo.htmlUrl,
-              description: repo.description,
-              language: repo.language,
-              stars: repo.stars,
-            },
-          }),
-        ),
-      );
+          },
+          create: {
+            userId: ctx.user.id,
+            githubId: repo.githubId,
+            name: repo.name,
+            fullName: repo.fullName,
+            private: repo.private,
+            htmlUrl: repo.htmlUrl,
+            description: repo.description,
+            language: repo.language,
+            stars: repo.stars,
+          },
+          update: {
+            name: repo.name,
+            fullName: repo.fullName,
+            private: repo.private,
+            htmlUrl: repo.htmlUrl,
+            description: repo.description,
+            language: repo.language,
+            stars: repo.stars,
+          },
+        });
+        result.push(item);
+      }
 
       return { connected: result.length };
     }),

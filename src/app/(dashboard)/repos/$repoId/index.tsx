@@ -52,6 +52,7 @@ function RepositoryDetailPage() {
     {
       repositoryId: repoId,
       state: "all",
+      countsOnly: true,
     },
     { enabled: !!repoId },
   );
@@ -138,8 +139,17 @@ function RepositoryDetailPage() {
             </a>
           </div>
         </div>
-        <Button variant={"ghost"} size={"icon-sm"} onClick={() => prs.refetch()}>
-          <RefreshCwIcon className={cn("size-4", prs.isFetching && "animate-spin")} />
+        <Button
+          variant={"ghost"}
+          size={"icon-sm"}
+          onClick={() => {
+            prs.refetch();
+            pr.refetch();
+          }}
+        >
+          <RefreshCwIcon
+            className={cn("size-4", (prs.isFetching || pr.isFetching) && "animate-spin")}
+          />
         </Button>
       </div>
 
@@ -192,7 +202,7 @@ function RepositoryDetailPage() {
                 <XCircleIcon className="size-6 text-destructive" />
               </div>
               <p className="mt-4 font-medium text-destructive">Failed to load pull requests.</p>
-              <p className="mt-1 text-muted-foreground text-sm">{pr.error?.message}</p>
+              <p className="mt-1 text-muted-foreground text-sm">{prs.error.message}</p>
             </CardContent>
           </Card>
         ) : pr.data?.length === 0 ? (
@@ -317,8 +327,15 @@ const PullRequestCard = ({ pr, repositoryId }: PullRequestCardProps) => {
   );
 };
 
+interface ReviewStatusConfig {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  className: string;
+  spin?: boolean;
+}
+
 const ReviewStatusBadge = ({ status }: { status: string }) => {
-  const config = {
+  const configMap: Record<string, ReviewStatusConfig> = {
     COMPLETED: {
       icon: CheckCircleIcon,
       label: "Reviewed",
@@ -340,7 +357,9 @@ const ReviewStatusBadge = ({ status }: { status: string }) => {
       label: "Failed",
       className: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20",
     },
-  }[status] ?? {
+  };
+
+  const config = configMap[status] ?? {
     icon: ClockIcon,
     label: "Pending",
     className: "bg-muted text-muted-foreground",

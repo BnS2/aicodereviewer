@@ -55,9 +55,9 @@ function formatPR(
     },
     headRef: pr.head.ref,
     baseRef: pr.base.ref,
-    additions: pr.additions,
-    deletions: pr.deletions,
-    changedFiles: pr.changed_files,
+    additions: pr.additions ?? 0,
+    deletions: pr.deletions ?? 0,
+    changedFiles: pr.changed_files ?? 0,
     createdAt: pr.created_at,
     updatedAt: pr.updated_at,
     mergedAt: pr.merged_at,
@@ -71,6 +71,9 @@ export const pullRequestRouter = createTRPCRouter({
       z.object({
         repositoryId: z.string(),
         state: z.enum(["open", "closed", "all"]).default("open"),
+        page: z.number().optional(),
+        perPage: z.number().optional(),
+        countsOnly: z.boolean().optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -79,11 +82,20 @@ export const pullRequestRouter = createTRPCRouter({
         input.repositoryId,
       );
 
-      const prs = await fetchPullRequests(owner, repo, accessToken, input.state);
+      const prs = await fetchPullRequests(
+        owner,
+        repo,
+        accessToken,
+        input.state,
+        input.page,
+        input.perPage,
+      );
 
       // NOTE: This doubles the fetch count for each PR to get additions/deletions stats.
       // With N PRs, this results in 1 + N API calls.
-      const enrichedPrs = await enrichPullRequestsWithStats(owner, repo, accessToken, prs);
+      const enrichedPrs = input.countsOnly
+        ? prs
+        : await enrichPullRequestsWithStats(owner, repo, accessToken, prs);
 
       const existingReviews = await ctx.db.review.findMany({
         where: {
