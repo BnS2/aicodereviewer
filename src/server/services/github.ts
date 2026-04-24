@@ -1,4 +1,4 @@
-import type { GitHubApiRepo, GitHubPullRequest } from "@/lib/types";
+import type { GitHubApiRepo, GitHubPullRequest, GitHubPullRequestFile } from "@/lib/types";
 import { db } from "@/server/db";
 
 export async function getGitHubAccessToken(userId: string): Promise<string | null> {
@@ -51,7 +51,10 @@ async function githubFetch<T>(
 
     return (await response.json()) as T;
   } catch (error: unknown) {
-    if (error instanceof Error && (error.name === "AbortError" || error.message === "GitHubTimeout")) {
+    if (
+      error instanceof Error &&
+      (error.name === "AbortError" || error.message === "GitHubTimeout")
+    ) {
       throw new Error("GitHubTimeout");
     }
     throw error;
@@ -133,7 +136,7 @@ export async function fetchPullRequests(
 
     try {
       const url = `https://api.github.com/repos/${owner}/${repo}/pulls?state=${state}&per_page=${per_page ?? 100}&page=${currentPage}&sort=updated&direction=desc`;
-      
+
       const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -155,7 +158,7 @@ export async function fetchPullRequests(
       prs.push(...data);
 
       const linkHeader = response.headers.get("link");
-      
+
       if (page !== undefined) {
         hasMore = false;
       } else {
@@ -217,4 +220,29 @@ export async function enrichPullRequestsWithStats(
   }
 
   return results;
+}
+
+export async function fetchPullRequestFiles(
+  accessToken: string,
+  owner: string,
+  repo: string,
+  prNumber: number,
+): Promise<Array<GitHubPullRequestFile>> {
+  const files: Array<GitHubPullRequestFile> = [];
+  let page = 1;
+  const perPage = 100;
+  let hasMore = true;
+
+  while (hasMore) {
+    const data = await githubFetch<Array<GitHubPullRequestFile>>(
+      `https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}/files?per_page=${perPage}&page=${page}`,
+      accessToken,
+    );
+
+    files.push(...data);
+    hasMore = data.length === perPage;
+    page++;
+  }
+
+  return files;
 }
