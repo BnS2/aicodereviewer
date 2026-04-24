@@ -18,6 +18,7 @@ import {
   XCircleIcon,
 } from "lucide-react";
 import { useState } from "react";
+import { DiffViewer } from "@/components/diff-viewer";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/lib/trpc";
 import { cn, formatDate } from "@/lib/utils";
-import { DiffViewer } from "@/components/diff-viewer";
 
 export const Route = createFileRoute("/(dashboard)/repos/$repoId/pr/$prNumber")({
   component: PullRequestDetailPage,
@@ -34,7 +34,7 @@ export const Route = createFileRoute("/(dashboard)/repos/$repoId/pr/$prNumber")(
 function PullRequestDetailPage() {
   const { repoId, prNumber } = Route.useParams();
   const numPrNumber = Number.parseInt(prNumber, 10);
-  const [activeTab, setActiveTab] = useState<"review" | "files">("review");
+  const [activeTab, setActiveTab] = useState<"review" | "files">("files");
 
   const pr = trpc.pullRequest.get.useQuery(
     {
@@ -89,7 +89,7 @@ function PullRequestDetailPage() {
     );
   }
 
-  const isMerged = pr.data.state === "closed" && pr.data.mergedAt;
+  const isMerged = pr.data.state === "closed" && !!pr.data.mergedAt;
 
   return (
     <div className="space-y-8">
@@ -308,6 +308,8 @@ function PRStatusBadge({
       </Badge>
     );
   }
+
+  return null;
 }
 
 function StatItem({

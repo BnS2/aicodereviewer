@@ -51,10 +51,7 @@ async function githubFetch<T>(
 
     return (await response.json()) as T;
   } catch (error: unknown) {
-    if (
-      error instanceof Error &&
-      (error.name === "AbortError" || error.message === "GitHubTimeout")
-    ) {
+    if (error instanceof Error && error.name === "AbortError") {
       throw new Error("GitHubTimeout");
     }
     throw error;
@@ -233,14 +230,16 @@ export async function fetchPullRequestFiles(
   const perPage = 100;
   let hasMore = true;
 
-  while (hasMore) {
+  const MAX_PAGES = 100;
+
+  while (hasMore && page <= MAX_PAGES) {
     const data = await githubFetch<Array<GitHubPullRequestFile>>(
       `https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}/files?per_page=${perPage}&page=${page}`,
       accessToken,
     );
 
     files.push(...data);
-    hasMore = data.length === perPage;
+    hasMore = data.length === perPage && page < MAX_PAGES;
     page++;
   }
 

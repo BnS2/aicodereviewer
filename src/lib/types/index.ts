@@ -90,10 +90,19 @@ export interface PullRequestCardProps {
   repositoryId: string;
 }
 
+export type PullRequestFileStatus =
+  | "added"
+  | "removed"
+  | "modified"
+  | "renamed"
+  | "copied"
+  | "changed"
+  | "unchanged";
+
 export interface GitHubPullRequestFile {
   sha: string;
   filename: string;
-  status: "added" | "removed" | "modified" | "renamed" | "copied" | "changed" | "unchanged";
+  status: PullRequestFileStatus;
   additions: number;
   deletions: number;
   changes: number;
@@ -104,7 +113,7 @@ export interface GitHubPullRequestFile {
 export interface PullRequestFile {
   sha: string;
   filename: string;
-  status: "added" | "removed" | "modified" | "renamed" | "copied" | "changed" | "unchanged";
+  status: PullRequestFileStatus;
   additions: number;
   deletions: number;
   changes: number;

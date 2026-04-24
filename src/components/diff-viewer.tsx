@@ -12,7 +12,7 @@ import {
   MinusIcon,
   PlusIcon,
 } from "lucide-react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,6 +39,10 @@ export function DiffViewer({ files }: DiffViewerProps) {
   const [expandedFiles, setExpandedFiles] = useState<Set<string>>(
     new Set(files.slice(0, 3).map((f) => f.sha)),
   );
+
+  useEffect(() => {
+    setExpandedFiles(new Set(files.slice(0, 3).map((f) => f.sha)));
+  }, [files]);
 
   const toggleFile = (sha: string) => {
     const next = new Set(expandedFiles);
@@ -126,10 +130,14 @@ function DiffFileCard({
   const StatusIcon = getStatusIcon(file.status);
   const statusConfig = getStatusConfig(file.status);
 
-  const copyFilename = () => {
-    navigator.clipboard.writeText(file.filename);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const copyFilename = async () => {
+    try {
+      await navigator.clipboard.writeText(file.filename);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy filename:", err);
+    }
   };
 
   const pathParts = file.filename.split("/");
@@ -152,16 +160,16 @@ function DiffFileCard({
         </div>
 
         <div className={cn("shrink-0 rounded-md p-1.5", statusConfig.bg)}>
-          {React.createElement(StatusIcon, {
-            className: cn("size-4 truncate text-muted-foreground"),
-          })}
+          <StatusIcon className={cn("size-4", statusConfig.color)} />
         </div>
 
-        <div className="min-w-0 flex-1 items-center gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
           {directory && (
-            <span className="truncate font-mono text-muted-foreground text-sm">{directory}/</span>
+            <span className="min-w-0 truncate font-mono text-muted-foreground text-sm">
+              {directory}/
+            </span>
           )}
-          <span className="truncate font-medium font-mono text-sm">{fileName}</span>
+          <span className="min-w-0 truncate font-mono font-medium text-sm">{fileName}</span>
           {file.changes > 300 && (
             <Badge
               variant={"outline"}
@@ -208,7 +216,7 @@ function DiffFileCard({
                   copyFilename();
                 }}
               >
-                {copied ? <CheckIcon /> : <CopyIcon className="size-4" />}
+                {copied ? <CheckIcon className="size-4" /> : <CopyIcon className="size-4" />}
               </Button>
               <DiffContent patch={file.patch} fileId={file.sha} />
             </div>
