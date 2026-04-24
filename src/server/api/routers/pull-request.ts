@@ -1,8 +1,9 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import type { GitHubPullRequest } from "@/lib/types";
+import { formatPR, formatPRFiles } from "@/lib/utils";
 import {
   enrichPullRequestsWithStats,
+  fetchPullRequestFiles,
   fetchPullRequests,
   fetchSinglePullRequest,
   getGitHubAccessToken,
@@ -35,34 +36,6 @@ async function getRepoContext(ctx: Context, repositoryId: string) {
   }
 
   return { repository, accessToken, owner, repo };
-}
-
-// Helper to format PR uniformly
-function formatPR(
-  pr: GitHubPullRequest,
-  review: { status: string; createdAt: Date } | null | undefined = null,
-) {
-  return {
-    id: pr.id,
-    number: pr.number,
-    title: pr.title,
-    state: pr.state,
-    draft: pr.draft,
-    htmlUrl: pr.html_url,
-    author: {
-      login: pr.user.login,
-      avatarUrl: pr.user.avatar_url,
-    },
-    headRef: pr.head.ref,
-    baseRef: pr.base.ref,
-    additions: pr.additions ?? 0,
-    deletions: pr.deletions ?? 0,
-    changedFiles: pr.changed_files ?? 0,
-    createdAt: pr.created_at,
-    updatedAt: pr.updated_at,
-    mergedAt: pr.merged_at,
-    review,
-  };
 }
 
 export const pullRequestRouter = createTRPCRouter({
@@ -143,5 +116,19 @@ export const pullRequestRouter = createTRPCRouter({
       });
 
       return formatPR(pr, existingReview);
+    }),
+
+  files: protectedProcedure
+    .input(
+      z.object({
+        repositoryId: z.string(),
+        prNumber: z.number(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { accessToken, owner, repo } = await getRepoContext(ctx, input.repositoryId);
+
+      const files = await fetchPullRequestFiles(accessToken, owner, repo, input.prNumber);
+      return formatPRFiles(files);
     }),
 });

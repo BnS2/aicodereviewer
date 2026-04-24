@@ -1,12 +1,13 @@
 import type { ClassValue } from "clsx";
 import clsx from "clsx";
 import { twMerge } from "tailwind-merge";
+import type { GitHubPullRequest, GitHubPullRequestFile, PullRequestFile } from "./types";
 
 export function cn(...inputs: Array<ClassValue>) {
   return twMerge(clsx(inputs));
 }
 
-export function formatDate(date: Date): string {
+export function formatDate(date: Date | string): string {
   const d = date instanceof Date ? date : new Date(date);
   const now = new Date();
 
@@ -36,4 +37,45 @@ export function formatDate(date: Date): string {
     day: "numeric",
     year: "numeric",
   });
+}
+
+// Helper to format PR uniformly
+export function formatPR(
+  pr: GitHubPullRequest,
+  review: { status: string; createdAt: Date } | null | undefined = null,
+) {
+  return {
+    id: pr.id,
+    number: pr.number,
+    title: pr.title,
+    state: pr.state,
+    draft: pr.draft,
+    htmlUrl: pr.html_url,
+    author: {
+      login: pr.user.login,
+      avatarUrl: pr.user.avatar_url,
+    },
+    headRef: pr.head.ref,
+    baseRef: pr.base.ref,
+    additions: pr.additions ?? 0,
+    deletions: pr.deletions ?? 0,
+    changedFiles: pr.changed_files ?? 0,
+    createdAt: pr.created_at,
+    updatedAt: pr.updated_at,
+    mergedAt: pr.merged_at,
+    review,
+  };
+}
+
+export function formatPRFiles(files: Array<GitHubPullRequestFile>): Array<PullRequestFile> {
+  return files.map((file) => ({
+    sha: file.sha,
+    filename: file.filename,
+    status: file.status,
+    additions: file.additions,
+    deletions: file.deletions,
+    changes: file.changes,
+    patch: file.patch,
+    previousFilename: file.previous_filename,
+  }));
 }

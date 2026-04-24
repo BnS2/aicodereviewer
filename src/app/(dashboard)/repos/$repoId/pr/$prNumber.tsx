@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowLeftIcon,
+  ArrowRightIcon,
   CheckCircleIcon,
   ClockIcon,
   ExternalLinkIcon,
@@ -11,9 +12,13 @@ import {
   Loader2Icon,
   MinusIcon,
   PlusIcon,
-  RefreshCwIcon,
+  ScanSearchIcon,
+  SparklesIcon,
+  Wand2Icon,
   XCircleIcon,
 } from "lucide-react";
+import { useState } from "react";
+import { DiffViewer } from "@/components/diff-viewer";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,263 +34,349 @@ export const Route = createFileRoute("/(dashboard)/repos/$repoId/pr/$prNumber")(
 function PullRequestDetailPage() {
   const { repoId, prNumber } = Route.useParams();
   const numPrNumber = Number.parseInt(prNumber, 10);
-
-  const repository = trpc.repository.list.useQuery(undefined, {
-    select: (repos) => repos.find((r) => r.id === repoId),
-    enabled: !!repoId,
-  });
+  const [activeTab, setActiveTab] = useState<"review" | "files">("files");
 
   const pr = trpc.pullRequest.get.useQuery(
     {
       repositoryId: repoId,
       prNumber: numPrNumber,
     },
-    { enabled: !!repoId && !Number.isNaN(numPrNumber) },
+    { enabled: !Number.isNaN(numPrNumber) },
   );
 
-  if (pr.isLoading || repository.isLoading) {
-    return <LoadingState />;
-  }
+  const files = trpc.pullRequest.files.useQuery(
+    {
+      repositoryId: repoId,
+      prNumber: numPrNumber,
+    },
+    { enabled: !Number.isNaN(numPrNumber) },
+  );
 
-  if (pr.error || !pr.data || !repository.data) {
-    return <ErrorState message={pr.error?.message || "Pull request not found"} repoId={repoId} />;
-  }
-
-  const data = pr.data;
-  const isMerged = data.state === "closed" && data.mergedAt !== null;
-
-  return (
-    <div className="space-y-8">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-4">
-          <Link to="/repos/$repoId" params={{ repoId }}>
-            <Button variant={"outline"} size={"icon"} className="shrink-0">
-              <ArrowLeftIcon className="size-4" />
-            </Button>
-          </Link>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="font-semibold text-2xl tracking-tight">{data.title}</h1>
-              <Badge
-                variant={data.state === "open" ? "default" : "secondary"}
-                className={cn(
-                  "gap-1",
-                  data.state === "open" &&
-                    "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400",
-                  isMerged &&
-                    "bg-purple-500/10 text-purple-600 hover:bg-purple-500/20 dark:text-purple-400",
-                )}
-              >
-                {isMerged ? (
-                  <GitMergeIcon className="size-3" />
-                ) : (
-                  <GitPullRequestIcon className="size-3" />
-                )}
-                {isMerged ? "Merged" : data.state.charAt(0).toUpperCase() + data.state.slice(1)}
-              </Badge>
-            </div>
-            <div className="mt-2 flex items-center gap-2 text-muted-foreground text-sm">
-              <span className="font-mono text-xs">#{data.number}</span>
-              <span>·</span>
-              <span className="flex items-center gap-1.5 font-medium text-foreground">
-                <Avatar className="size-4 ring-1 ring-border">
-                  <AvatarImage src={data.author.avatarUrl} alt={data.author.login} />
-                  <AvatarFallback>{data.author.login[0].toUpperCase()}</AvatarFallback>
-                </Avatar>
-                {data.author.login}
-              </span>
-              <span>·</span>
-              <span>opened {formatDate(new Date(data.createdAt))}</span>
-            </div>
+  if (pr.isLoading) {
+    return (
+      <div className="space-y-8">
+        <div className="flex items-center gap-4">
+          <Skeleton className="size-10 rounded-lg" />
+          <div className="space-y-2">
+            <Skeleton className="h-7 w-96" />
+            <Skeleton className="h-4 w-64" />
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant={"ghost"}
-            size={"icon-sm"}
-            onClick={() => pr.refetch()}
-            disabled={pr.isFetching}
-          >
-            <RefreshCwIcon className={cn("size-4", pr.isFetching && "animate-spin")} />
-          </Button>
-          <a href={data.htmlUrl} target="_blank" rel="noopener noreferrer">
-            <Button variant={"outline"} size={"sm"} className="gap-2">
-              <ExternalLinkIcon className="size-4" />
-              View on GitHub
-            </Button>
-          </a>
-        </div>
+        <Skeleton className="h-24 w-full rounded-xl" />
+        <Skeleton className="h-64 w-full rounded-xl" />
       </div>
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
-          <Card>
-            <CardContent className="p-6">
-              <h3 className="mb-4 font-medium text-muted-foreground text-sm uppercase tracking-wider">
-                Branches
-              </h3>
-              <div className="flex items-center gap-3 font-mono text-sm">
-                <code className="rounded-md bg-muted px-2 py-1 text-foreground">
-                  {data.baseRef}
-                </code>
-                <ArrowLeftIcon className="size-4 text-muted-foreground" />
-                <code className="rounded-md bg-muted px-2 py-1 text-foreground">
-                  {data.headRef}
-                </code>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <h3 className="mb-4 font-medium text-muted-foreground text-sm uppercase tracking-wider">
-                Changes
-              </h3>
-              <div className="flex items-center gap-8">
-                <div className="space-y-1">
-                  <p className="text-muted-foreground text-xs">Files Changed</p>
-                  <p className="flex items-center gap-2 font-semibold text-2xl">
-                    <FileTextIcon className="size-5 text-muted-foreground" />
-                    {data.changedFiles}
-                  </p>
-                </div>
-                <div className="h-10 w-px bg-border/60" />
-                <div className="space-y-1">
-                  <p className="text-muted-foreground text-xs">Additions</p>
-                  <p className="flex items-center gap-2 font-semibold text-2xl text-emerald-600 dark:text-emerald-400">
-                    <PlusIcon className="size-5" />
-                    {data.additions}
-                  </p>
-                </div>
-                <div className="h-10 w-px bg-border/60" />
-                <div className="space-y-1">
-                  <p className="text-muted-foreground text-xs">Deletions</p>
-                  <p className="flex items-center gap-2 font-semibold text-2xl text-red-600 dark:text-red-400">
-                    <MinusIcon className="size-5" />
-                    {data.deletions}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="space-y-6">
-          <Card>
-            <CardContent className="p-6">
-              <h3 className="mb-4 font-medium text-muted-foreground text-sm uppercase tracking-wider">
-                Review Status
-              </h3>
-              {data.review ? (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <ReviewStatusIcon status={data.review.status} />
-                    <div>
-                      <p className="font-medium">
-                        {data.review.status.charAt(0) + data.review.status.slice(1).toLowerCase()}
-                      </p>
-                      <p className="text-muted-foreground text-xs">
-                        Last updated {formatDate(new Date(data.review.createdAt))}
-                      </p>
-                    </div>
-                  </div>
-                  <Button className="w-full" variant="outline">
-                    View Full Review
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 text-muted-foreground">
-                    <ClockIcon className="size-5" />
-                    <p className="font-medium">No review yet</p>
-                  </div>
-                  <Button className="w-full">Start Review Analysis</Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <h3 className="mb-4 font-medium text-muted-foreground text-sm uppercase tracking-wider">
-                Repository
-              </h3>
-              <div className="flex items-center gap-3">
-                <div className="flex size-8 items-center justify-center rounded-md bg-muted">
-                  <GitBranchIcon className="size-4 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="font-medium text-sm">{repository.data.fullName}</p>
-                  <Link
-                    to="/repos/$repoId"
-                    params={{ repoId }}
-                    className="text-muted-foreground text-xs hover:underline"
-                  >
-                    View all pull requests
-                  </Link>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ReviewStatusIcon({ status }: { status: string }) {
-  switch (status) {
-    case "COMPLETED":
-      return <CheckCircleIcon className="size-5 text-emerald-500" />;
-    case "PROCESSING":
-      return <Loader2Icon className="size-5 animate-spin text-blue-500" />;
-    case "PENDING":
-      return <ClockIcon className="size-5 text-amber-500" />;
-    case "FAILED":
-      return <XCircleIcon className="size-5 text-red-500" />;
-    default:
-      return <ClockIcon className="size-5 text-muted-foreground" />;
+    );
   }
-}
 
-function LoadingState() {
+  if (pr.error || !pr.data) {
+    return (
+      <Card>
+        <CardContent className="py-16 text-center">
+          <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-destructive/10">
+            <XCircleIcon className="size-6 text-destructive" />
+          </div>
+          <p className="mt-4 font-medium text-destructive">
+            {pr.error?.message ?? "Pull request not found"}
+          </p>
+          <Link to={`/repos/$repoId`} params={{ repoId }} className="mt-6 inline-block">
+            <Button variant={"outline"}>
+              <ArrowLeftIcon className="size-4" />
+              Back to Repository
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const isMerged = pr.data.state === "closed" && !!pr.data.mergedAt;
+
   return (
     <div className="space-y-8">
       <div className="flex items-start gap-4">
-        <Skeleton className="size-9 rounded-lg" />
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-96" />
-          <Skeleton className="h-4 w-64" />
+        <Link to={`/repos/$repoId`} params={{ repoId }}>
+          <Button variant={"outline"} size={"icon"} className="mt-1 shrink-0">
+            <ArrowLeftIcon className="size-4" />
+          </Button>
+        </Link>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-3">
+                <div
+                  className={cn(
+                    "shrink-0 rounded-lg p-2",
+                    isMerged
+                      ? "bg-purple-500/10"
+                      : pr.data.state === "closed"
+                        ? "bg-red-500/10"
+                        : "bg-emerald-500/10",
+                  )}
+                >
+                  {isMerged ? (
+                    <GitMergeIcon className="size-5 text-purple-500" />
+                  ) : pr.data.state === "closed" ? (
+                    <XCircleIcon className="size-5 text-red-500" />
+                  ) : (
+                    <GitPullRequestIcon className="size-5 text-emerald-500" />
+                  )}
+                </div>
+
+                <div className="min-w-0">
+                  <h1 className="truncate font-semibold text-xl tracking-tight">{pr.data.title}</h1>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <PRStatusBadge
+                      state={pr.data.state}
+                      isMerged={!!isMerged}
+                      draft={pr.data.draft}
+                    />
+                    <span className="font-mono text-muted-foreground text-sm">
+                      #{pr.data.number}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <a
+              href={pr.data.htmlUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0"
+            >
+              <Button variant={"outline"} size={"sm"} className="gap-2">
+                <ExternalLinkIcon className="size-4" />
+                GitHub
+              </Button>
+            </a>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-4 text-muted-foreground text-sm">
+            <span className="flex items-center gap-2">
+              <Avatar className="size-5 ring-1 ring-border">
+                <AvatarImage src={pr.data.author.avatarUrl} />
+                <AvatarFallback className="text-[10px]">
+                  {pr.data.author.login[0].toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <span className="font-medium text-foreground">{pr.data.author.login}</span>
+            </span>
+            <span className="text-muted-foreground/40">·</span>
+            <span className="flex items-center gap-1.5">
+              <ClockIcon className="size-3.5" />
+              {formatDate(pr.data.createdAt)}
+            </span>
+          </div>
         </div>
       </div>
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
-          <Skeleton className="h-32 w-full rounded-xl" />
-          <Skeleton className="h-40 w-full rounded-xl" />
+
+      <Card>
+        <CardContent className="p-0">
+          <div className="flex items-center divide-x divide-border/60">
+            <div className="flex-1 p-4">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-muted p-2">
+                  <GitBranchIcon className="size-4 text-muted-foreground" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="mb-1 text-muted-foreground text-xs">Merged request</p>
+                  <div className="flex items-center gap-2 text-sm">
+                    <code className="min-w-0 truncate rounded bg-secondary px-2 py-0.5 font-mono text-xs">
+                      {pr.data.headRef}
+                    </code>
+                    <ArrowRightIcon className="size-3 shrink-0 text-muted-foreground" />
+                    <code className="min-w-0 truncate rounded bg-secondary px-2 py-0.5 font-mono text-xs">
+                      {pr.data.baseRef}
+                    </code>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-6 px-6 py-4">
+              <StatItem
+                icon={PlusIcon}
+                value={pr.data.additions}
+                colorClass="text-emerald-600 dark:text-emerald-400"
+                bgClass="bg-emerald-500/10"
+              />
+              <StatItem
+                icon={MinusIcon}
+                value={pr.data.deletions}
+                colorClass="text-red-600 dark:text-red-400"
+                bgClass="bg-red-500/10"
+              />
+              <StatItem
+                icon={FileTextIcon}
+                value={pr.data.changedFiles}
+                colorClass="text-muted-foreground dark:text-muted-foreground"
+                bgClass="bg-muted"
+              />
+            </div>
+
+            {/* TODO: Review action cluster */}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tabs */}
+      <div className="border-border/60 border-b">
+        <div className="flex items-center gap-1">
+          <TabButton
+            active={activeTab === "files"}
+            onClick={() => setActiveTab("files")}
+            icon={FileTextIcon}
+            label="Changed Files"
+            count={files.data?.length}
+          />
         </div>
-        <div className="space-y-6">
-          <Skeleton className="h-48 w-full rounded-xl" />
-          <Skeleton className="h-32 w-full rounded-xl" />
+      </div>
+
+      {activeTab === "files" && (
+        <div>
+          {files.isLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((index) => (
+                <Skeleton key={index} className="h-32 w-full rounded-xl" />
+              ))}
+            </div>
+          ) : files.error ? (
+            <Card className="border-destructive/50">
+              <CardContent className="py-12 text-center">
+                <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-destructive/10">
+                  <XCircleIcon className="size-6 text-destructive" />
+                </div>
+                <p className="mt-4 font-medium text-destructive">No files changed.</p>
+                <p className="mt-1 text-muted-foreground text-sm">{files.error.message}</p>
+              </CardContent>
+            </Card>
+          ) : files.data ? (
+            <DiffViewer files={files.data} />
+          ) : null}
         </div>
+      )}
+    </div>
+  );
+}
+
+function PRStatusBadge({
+  state,
+  isMerged,
+  draft,
+}: {
+  state: string;
+  isMerged: boolean;
+  draft: boolean;
+}) {
+  if (draft) {
+    return (
+      <Badge variant={"secondary"} className="gap-1">
+        Draft
+      </Badge>
+    );
+  }
+
+  if (isMerged) {
+    return (
+      <Badge
+        variant={"secondary"}
+        className="gap-1 border border-purple-500/20 bg-purple-600/10 dark:text-purple-400"
+      >
+        <GitMergeIcon className="size-3" />
+        Merged
+      </Badge>
+    );
+  }
+
+  if (state === "closed") {
+    return (
+      <Badge variant={"destructive"} className="gap-1">
+        <XCircleIcon className="size-3" />
+        Closed
+      </Badge>
+    );
+  }
+
+  if (state === "open") {
+    return (
+      <Badge
+        variant={"secondary"}
+        className="gap-1 border border-emerald-500/20 bg-emerald-600/10 dark:text-emerald-400"
+      >
+        <GitMergeIcon className="size-3" />
+        Open
+      </Badge>
+    );
+  }
+
+  return null;
+}
+
+function StatItem({
+  icon: Icon,
+  value,
+  label,
+  colorClass,
+  bgClass,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  value: number;
+  label?: string;
+  colorClass: string;
+  bgClass: string;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className={cn("rounded-md p-1.5", bgClass)}>
+        <Icon className={cn("size-3.5", colorClass)} />
+      </div>
+      <div>
+        <p className={cn("font-semibold text-sm tabular-nums", colorClass)}>
+          {value.toLocaleString()}
+        </p>
+        {label && <p className={cn("font-medium text-xs", colorClass)}>{label}</p>}
       </div>
     </div>
   );
 }
 
-function ErrorState({ message, repoId }: { message: string; repoId: string }) {
+function TabButton({
+  active,
+  onClick,
+  icon: Icon,
+  label,
+  count,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  count?: number;
+}) {
   return (
-    <Card className="py-16 text-center">
-      <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-destructive/10">
-        <XCircleIcon className="size-6 text-destructive" />
-      </div>
-      <p className="mt-4 font-medium text-destructive">Error Loading Pull Request</p>
-      <p className="mt-1 text-muted-foreground text-sm">{message}</p>
-      <Link to="/repos/$repoId" params={{ repoId }} className="mt-6 inline-block">
-        <Button variant={"outline"}>
-          <ArrowLeftIcon className="size-4" />
-          Back to repository
-        </Button>
-      </Link>
-    </Card>
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "relative flex items-center gap-2 px-4 py-2.5 font-medium text-sm transition-colors",
+        active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+      )}
+    >
+      <Icon className="size-4" />
+      {label}
+      {count !== undefined && (
+        <span
+          className={cn(
+            "rounded-md px-1.5 py-0.5 text-xs tabular-nums",
+            active ? "bg-foreground/10 text-foreground" : "bg-muted text-muted-foreground",
+          )}
+        >
+          {count}
+        </span>
+      )}
+      {active && (
+        <span className="absolute right-0 bottom-0 left-0 h-0.5 rounded-full bg-primary" />
+      )}
+    </button>
   );
 }

@@ -54,3 +54,7 @@ yarn-error.log*
 
 # CodeRabbit review notes
 coderabbit-review.md
+
+# dev
+aicodereviewer.code-workspace
+dev-notes.txt

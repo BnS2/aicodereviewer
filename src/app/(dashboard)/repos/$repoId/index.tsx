@@ -278,7 +278,7 @@ const PullRequestCard = ({ pr, repositoryId }: PullRequestCardProps) => {
                 <span className="text-muted-foreground/40">·</span>
                 <span className="flex items-center gap-1">
                   <ClockIcon className="size-3" />
-                  {formatDate(new Date(pr.createdAt))}
+                  {formatDate(pr.createdAt)}
                 </span>
               </div>
               <div className="flex items-center gap-4 text-sm">
