@@ -42,28 +42,41 @@ export const reviewRouter = createTRPCRouter({
 
       const pr = await fetchSinglePullRequest(owner, repo, accessToken, input.prNumber);
 
-      const existingReview = await ctx.db.review.findFirst({
-        where: {
-          repositoryId: repository.id,
-          userId: ctx.user.id,
-          prNumber: pr.number,
-          status: { in: ["PENDING", "PROCESSING"] },
-        },
-        orderBy: { createdAt: "desc" },
-      });
+      // Use a serializable transaction to atomically find-or-create the review,
+      // preventing duplicate PENDING/PROCESSING reviews from concurrent requests.
+      const { review, isExisting } = await ctx.db.$transaction(
+        async (tx) => {
+          const existing = await tx.review.findFirst({
+            where: {
+              repositoryId: repository.id,
+              userId: ctx.user.id,
+              prNumber: pr.number,
+              status: { in: ["PENDING", "PROCESSING"] },
+            },
+            orderBy: { createdAt: "desc" },
+          });
 
-      if (existingReview) return { reviewId: existingReview.id };
+          if (existing) {
+            return { review: existing, isExisting: true };
+          }
 
-      const review = await ctx.db.review.create({
-        data: {
-          repositoryId: repository.id,
-          userId: ctx.user.id,
-          prNumber: pr.number,
-          prTitle: pr.title,
-          prUrl: pr.html_url,
-          status: "PENDING",
+          const created = await tx.review.create({
+            data: {
+              repositoryId: repository.id,
+              userId: ctx.user.id,
+              prNumber: pr.number,
+              prTitle: pr.title,
+              prUrl: pr.html_url,
+              status: "PENDING",
+            },
+          });
+
+          return { review: created, isExisting: false };
         },
-      });
+        { isolationLevel: "Serializable" },
+      );
+
+      if (isExisting) return { reviewId: review.id };
 
       try {
         await inngest.send({
