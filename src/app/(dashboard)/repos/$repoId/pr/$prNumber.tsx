@@ -13,7 +13,6 @@ import {
   MinusIcon,
   PlusIcon,
   ScanSearchIcon,
-  SparklesIcon,
   Wand2Icon,
   XCircleIcon,
 } from "lucide-react";
@@ -25,7 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/lib/trpc";
-import { cn, formatDate } from "@/lib/utils";
+import { cn, formatDate, getTimeAgo } from "@/lib/utils";
 
 export const Route = createFileRoute("/(dashboard)/repos/$repoId/pr/$prNumber")({
   component: PullRequestDetailPage,
@@ -34,7 +33,7 @@ export const Route = createFileRoute("/(dashboard)/repos/$repoId/pr/$prNumber")(
 function PullRequestDetailPage() {
   const { repoId, prNumber } = Route.useParams();
   const numPrNumber = Number.parseInt(prNumber, 10);
-  const [activeTab, setActiveTab] = useState<"review" | "files">("files");
+  const [activeTab, setActiveTab] = useState<"review" | "files">("review");
 
   const pr = trpc.pullRequest.get.useQuery(
     {
@@ -51,6 +50,33 @@ function PullRequestDetailPage() {
     },
     { enabled: !Number.isNaN(numPrNumber) },
   );
+
+  const latestReview = trpc.review.getLatestForPR.useQuery(
+    {
+      repositoryId: repoId,
+      prNumber: numPrNumber,
+    },
+    {
+      enabled: !Number.isNaN(numPrNumber),
+      refetchInterval: (query) => {
+        const status = query.state.data?.status;
+        if (status === "PENDING" || status === "PROCESSING") {
+          return 2000;
+        }
+        return false;
+      },
+    },
+  );
+
+  const triggerReview = trpc.review.trigger.useMutation({
+    onSuccess: () => {
+      latestReview.refetch();
+      pr.refetch();
+    },
+  });
+
+  const isReviewing =
+    latestReview.data?.status === "PENDING" || latestReview.data?.status === "PROCESSING";
 
   if (pr.isLoading) {
     return (
@@ -181,7 +207,7 @@ function PullRequestDetailPage() {
                 <div className="min-w-0 flex-1">
                   <p className="mb-1 text-muted-foreground text-xs">Merged request</p>
                   <div className="flex items-center gap-2 text-sm">
-                    <code className="min-w-0 truncate rounded bg-secondary px-2 py-0.5 font-mono text-xs">
+                    <code className="min-w-30 truncate rounded bg-secondary px-2 py-0.5 font-mono text-xs">
                       {pr.data.headRef}
                     </code>
                     <ArrowRightIcon className="size-3 shrink-0 text-muted-foreground" />
@@ -214,7 +240,34 @@ function PullRequestDetailPage() {
               />
             </div>
 
-            {/* TODO: Review action cluster */}
+            <div className="flex items-center gap-3 px-6 py-4">
+              <div className="flex items-center gap-2 rounded-lg px-3 py-1.5">
+                <ReviewStatusBadge
+                  status={latestReview.data?.status ?? null}
+                  completedAt={
+                    latestReview.data?.status === "COMPLETED" ? latestReview.data.createdAt : null
+                  }
+                />
+                {!isReviewing && <div className="h-4 w-px bg-border" />}
+                {isReviewing ? null : (
+                  <Button
+                    variant={"outline"}
+                    size={"sm"}
+                    onClick={() =>
+                      triggerReview.mutate({
+                        repositoryId: repoId,
+                        prNumber: numPrNumber,
+                      })
+                    }
+                    disabled={triggerReview.isPending}
+                    className="h-auto gap-1.5 px-2 py-1 text-xs"
+                  >
+                    <Wand2Icon />
+                    {latestReview.data ? "Review again" : "Review"}
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -222,6 +275,17 @@ function PullRequestDetailPage() {
       {/* Tabs */}
       <div className="border-border/60 border-b">
         <div className="flex items-center gap-1">
+          <TabButton
+            active={activeTab === "review"}
+            onClick={() => setActiveTab("review")}
+            icon={ScanSearchIcon}
+            label="Review"
+            count={
+              latestReview.data?.status === "COMPLETED" && Array.isArray(latestReview.data.comments)
+                ? latestReview.data.comments.length
+                : 0
+            }
+          />
           <TabButton
             active={activeTab === "files"}
             onClick={() => setActiveTab("files")}
@@ -231,6 +295,38 @@ function PullRequestDetailPage() {
           />
         </div>
       </div>
+
+      {activeTab === "review" && (
+        <div>
+          {latestReview.data ? (
+            <div></div>
+          ) : (
+            <Card>
+              <CardContent className="py-16 text-center">
+                <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-primary/10">
+                  <ScanSearchIcon className="size-7 text-primary" />
+                </div>
+                <p className="mt-4 font-medium">No reviews yet.</p>
+                <p className="mx-auto mt-1 max-w-sm text-muted-foreground text-sm">
+                  Click &quot;Run AI Review&quot; to analyze this pull request for bugs, security
+                  issues, and improvements.
+                </p>
+                <Button
+                  className="mt-6"
+                  onClick={() =>
+                    triggerReview.mutate({
+                      repositoryId: repoId,
+                      prNumber: numPrNumber,
+                    })
+                  }
+                >
+                  Run AI Review
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       {activeTab === "files" && (
         <div>
@@ -378,5 +474,61 @@ function TabButton({
         <span className="absolute right-0 bottom-0 left-0 h-0.5 rounded-full bg-primary" />
       )}
     </button>
+  );
+}
+
+function ReviewStatusBadge({
+  status,
+  completedAt,
+}: {
+  status: string | null;
+  completedAt: Date | null;
+}) {
+  if (!status) {
+    return (
+      <Badge variant={"outline"} className="gap-1.5 border bg-muted text-muted-foreground">
+        <ClockIcon className="size-3" />
+        Not reviewed
+      </Badge>
+    );
+  }
+
+  const config = {
+    COMPLETED: {
+      icon: CheckCircleIcon,
+      label: completedAt
+        ? `AI Review completed · ${getTimeAgo(completedAt)}`
+        : "AI Review completed",
+      className: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+    },
+    PROCESSING: {
+      icon: Loader2Icon,
+      label: "Analyzing code…",
+      className: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
+      spin: true,
+    },
+    PENDING: {
+      icon: ClockIcon,
+      label: "Queued for review",
+      className: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+    },
+    FAILED: {
+      icon: XCircleIcon,
+      label: "Review failed",
+      className: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20",
+    },
+  }[status] ?? {
+    icon: ClockIcon,
+    label: "Not reviewed",
+    className: "bg-muted text-muted-foreground",
+  };
+
+  const Icon = config.icon;
+
+  return (
+    <Badge variant="outline" className={cn("gap-1.5 border", config.className)}>
+      <Icon className={cn("size-3", config.spin && "animate-spin")} />
+      {config.label}
+    </Badge>
   );
 }

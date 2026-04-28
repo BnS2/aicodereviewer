@@ -39,6 +39,24 @@ export function formatDate(date: Date | string): string {
   });
 }
 
+export const getTimeAgo = (date: Date | string) => {
+  const d = date instanceof Date ? date : new Date(date);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMin = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMin / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  const diffMonths = Math.floor(diffDays / 30);
+  const diffYears = Math.floor(diffMonths / 12);
+
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 30) return `${diffDays}d ago`;
+  if (diffMonths < 12) return `${diffMonths}mo ago`;
+  return `${diffYears}y ago`;
+};
+
 // Helper to format PR uniformly
 export function formatPR(
   pr: GitHubPullRequest,
@@ -63,7 +81,7 @@ export function formatPR(
     createdAt: pr.created_at,
     updatedAt: pr.updated_at,
     mergedAt: pr.merged_at,
-    review,
+    review: review ? { status: review.status, createdAt: review.createdAt.toISOString() } : null,
   };
 }
 

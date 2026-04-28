@@ -85,7 +85,7 @@ export interface PullRequestCardProps {
     changedFiles: number;
     createdAt: string;
     mergedAt: string | null;
-    review: { status: string; createdAt: Date } | null;
+    review: { status: string; createdAt: string } | null;
   };
   repositoryId: string;
 }
