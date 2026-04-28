@@ -3,16 +3,6 @@ import { db } from "@/server/db";
 import { fetchPullRequestFiles, getGitHubAccessToken } from "@/server/services/github";
 import { inngest } from "../client";
 
-export type ReviewPREvent = {
-  name: "review/pr.requested";
-  data: {
-    reviewId: string;
-    repositoryId: string;
-    prNumber: number;
-    userId: string;
-  };
-};
-
 export const reviewPR = inngest.createFunction(
   {
     id: "review-pr",

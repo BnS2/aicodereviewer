@@ -245,7 +245,7 @@ function PullRequestDetailPage() {
                 <ReviewStatusBadge
                   status={latestReview.data?.status ?? null}
                   completedAt={
-                    latestReview.data?.status === "COMPLETED" ? latestReview.data.createdAt : null
+                    latestReview.data?.status === "COMPLETED" ? latestReview.data.updatedAt : null
                   }
                 />
                 {!isReviewing && <div className="h-4 w-px bg-border" />}

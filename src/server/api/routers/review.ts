@@ -42,6 +42,18 @@ export const reviewRouter = createTRPCRouter({
 
       const pr = await fetchSinglePullRequest(owner, repo, accessToken, input.prNumber);
 
+      const existingReview = await ctx.db.review.findFirst({
+        where: {
+          repositoryId: repository.id,
+          userId: ctx.user.id,
+          prNumber: pr.number,
+          status: { in: ["PENDING", "PROCESSING"] },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      if (existingReview) return { reviewId: existingReview.id };
+
       const review = await ctx.db.review.create({
         data: {
           repositoryId: repository.id,
@@ -53,15 +65,27 @@ export const reviewRouter = createTRPCRouter({
         },
       });
 
-      await inngest.send({
-        name: "review/pr.requested",
-        data: {
-          reviewId: review.id,
-          repositoryId: repository.id,
-          prNumber: pr.number,
-          userId: ctx.user.id,
-        },
-      });
+      try {
+        await inngest.send({
+          name: "review/pr.requested",
+          data: {
+            reviewId: review.id,
+            repositoryId: repository.id,
+            prNumber: pr.number,
+            userId: ctx.user.id,
+          },
+        });
+      } catch {
+        await ctx.db.review.update({
+          where: { id: review.id },
+          data: { status: "FAILED" },
+        });
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to queue review",
+        });
+      }
 
       return { reviewId: review.id };
     }),
